@@ -33,11 +33,7 @@ class JobSubmitter:
             jobQueue=self.__job_queue,
             jobDefinition=self.__job_definition,
             containerOverrides={
-                "environment": [
-                    {"name": k, "value": str(v)}
-                    for k, v in config.items()
-                    if v is not None
-                ],
+                "environment": [{"name": k, "value": str(v)} for k, v in config.items() if v is not None],
             },
         )
         return response["jobId"]
@@ -50,6 +46,4 @@ class JobSubmitter:
             reason (str, optional): The reason for termination. Defaults to None.
 
         """
-        self.__batch_client.terminate_job(
-            jobId=job_id, reason=reason or "Terminated by JobSubmitter"
-        )
+        self.__batch_client.terminate_job(jobId=job_id, reason=reason or "Terminated by JobSubmitter")
