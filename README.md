@@ -107,9 +107,19 @@ uv run python -m aws_batch_tf.launcher
 
 The launcher submits jobs to Batch, then polls the SQS queue until results arrive.
 
+### 5. Teardown
+
+```bash
+cd terraform
+source ../.env
+terraform destroy
+```
+
+This removes the Batch compute environment, job queue, job definition, SQS queue, and all IAM roles created by Terraform. It does not touch any VPC resources (those are read-only data sources).
+
 ## Configuration reference
 
-All settings are loaded from environment variables. Copy `.env.default` to `.env` to get started.
+All infrastructure and app settings are loaded from environment variables. Copy `.env.default` to `.env` to get started.
 
 ### Infrastructure (`TF_VAR_*`)
 
@@ -133,6 +143,12 @@ All settings are loaded from environment variables. Copy `.env.default` to `.env
 | `TF_VAR_JOB_ATTEMPT_DURATION_SECONDS` | `3600` | Per-attempt timeout. Also controls SQS visibility timeout |
 | `TF_VAR_JOB_RETRY_ATTEMPTS` | `1` | Number of retry attempts on failure |
 
+By default, Terraform looks up the **AWS default VPC** in the target region and uses all of its subnets and its default security group. No VPC resources are created or modified.
+
+To use a specific VPC, set `TF_VAR_SUBNET_IDS` and `TF_VAR_SECURITY_GROUP_IDS` in `.env`. Both must be provided together.
+
+Make sure whichever subnets you use have a route to the internet — Batch EC2 instances need outbound HTTPS to reach ECR (image pull), SQS, and CloudWatch.
+
 ### Launcher (`src/aws_batch_tf/launcher_settings.py`)
 
 | Variable | Default | Description |
@@ -154,37 +170,17 @@ These are passed as container environment variables per job via `JobSubmitter.su
 | `MESSAGES_QUEUE_NAME` | — | SQS queue name to push results to |
 | `HELLO_MESSAGE` | `"Default hello message from the job!"` | Example payload |
 
-## Networking
-
-By default, Terraform looks up the **AWS default VPC** in the target region and uses all of its subnets and its default security group. No VPC resources are created or modified.
-
-To use a specific VPC, set `TF_VAR_SUBNET_IDS` and `TF_VAR_SECURITY_GROUP_IDS` in `.env`. Both must be provided together.
-
-Make sure whichever subnets you use have a route to the internet — Batch EC2 instances need outbound HTTPS to reach ECR (image pull), SQS, and CloudWatch.
-
-## Extending the job
-
 `src/aws_batch_tf/job/job.py` is the container entry point. Replace the body of `job()` with your actual workload. Use `JobSettings` to receive per-job parameters (add fields to `job_settings.py` and pass them in `launcher.py` via `config={"YOUR_PARAM": value}`). Push your result back to SQS using `MessagesQueue.push()`.
 
-## CI/CD
+### CI/CD
 
-The included GitHub Actions workflow (`.github/workflows/dockerhub-push.yml`) builds and pushes the Docker image to Docker Hub on every push to `main` that touches `src/` or `Dockerfile`. It requires three repository secrets/variables:
+The included GitHub Actions workflow (`.github/workflows/dockerhub-push.yml`) builds and pushes the Docker image to Docker Hub on every push to `main` that touches job-related code. It requires three repository secrets/variables:
 
 | Name | Type | Description |
 |---|---|---|
 | `DOCKERHUB_USERNAME` | Secret | Docker Hub username |
 | `DOCKERHUB_TOKEN` | Secret | Docker Hub access token |
 | `DOCKERHUB_REPO` | Variable | Target image repository, e.g. `myuser/myrepo` |
-
-## Teardown
-
-```bash
-cd terraform
-source ../.env
-terraform destroy
-```
-
-This removes the Batch compute environment, job queue, job definition, SQS queue, and all IAM roles created by Terraform. It does not touch any VPC resources (those are read-only data sources).
 
 ## License
 
