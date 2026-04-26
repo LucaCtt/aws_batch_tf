@@ -60,7 +60,9 @@ All AWS infrastructure — the Batch compute environment, job queue, job definit
 | [Docker](https://docs.docker.com/get-docker/) | Build the job container image |
 | AWS credentials | With sufficient permissions (see below) |
 
-### Required AWS permissions
+### AWS credentials and permissions
+
+Set up AWS credentials on your machine using one of the [supported methods](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-quickstart.html).
 
 Your IAM user/role needs permission to create and manage: Batch compute environments, job queues, job definitions, EC2 instances, SQS queues, IAM roles and policies, and (if using auto-networking) to read VPC/subnet/security group information.
 
